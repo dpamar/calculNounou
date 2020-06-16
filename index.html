@@ -150,20 +150,17 @@ function showRes() {
 	var resHeuresPayées = resHeuresEffectives + resHeuresResponsables * 2/3;
 	show('HeuresPayées', resHeuresPayées);
 
-	var resBrut = resHeuresPayées * appSalaireBrut;
+	var resBrut = resHeuresPayées * appSalaireBrut * 1.1;
 	show('Brut', resBrut);
 
-	var resNet = resHeuresPayées * appSalaireNet;
+	var resNet = resHeuresPayées * appSalaireNet * 1.1;
 	show('Net', resNet);
 
-	var resCongés = resNet / 10;
-	show('Congés', resCongés);
-
-	var resTotal = resNet + resCongés;
-	show('Total', resTotal);
-
-	var resMensuel = resTotal / resMois;
-	show('Mensuel', resMensuel);
+	var resBrutMensuel = resBrut / resMois;
+	show('BrutMensuel', resBrutMensuel);
+	
+	var resNetMensuel = resNet / resMois;
+	show('NetMensuel', resNetMensuel);
 	
 	var resPaje = resHeuresPayées/resMois;
 	show('Paje', resPaje);
@@ -280,18 +277,14 @@ function salaireNetChange(value) {
 						<li id="resHeuresEffectives">HeuresEffectives:</li>
 						<li id="resHeuresResponsables">HeuresResponsables:</li>
 						<li id="resHeuresPayées">HeuresPayées:</li>
-						<ul><li><i>Heures payées : heures effectives + 2 tiers des heures de surveillance responsable</i></li></ul><br/>
-						
+						<ul><li><i>Heures payées : heures effectives + 2 tiers des heures de surveillance responsable</i></li></ul>
+						<hr/>	
 						<li id="resBrut">Brut:</li>
-						<ul><li><i>Salaire: volume d'heure </i>x<i> salaire horaire</i></li></ul>
 						<li id="resNet">Net:</li>
-						<ul><li><i>Salaire: volume d'heure </i>x<i> salaire horaire</i></li></ul>
-						<li id="resCongés">Congés:</li>
-						<ul><li><i>Congés: 10% du salaire net total</i></li></ul><br/>
-						
-						<li id="resTotal">Total:</li>
-						<ul><li><i>Total: Salaire + indemnité de congés payés</i></li></ul>
-						<li id="resMensuel">Mensuel:</li>
+						<ul><li><i>Salaire: volume d'heure </i>x<i> salaire horaire + 10% d'indemnité de congés</i></li></ul>
+						<hr/>	
+						<li id="resBrutMensuel">BrutMensuel:</li>
+						<li id="resNetMensuel">NetMensuel:</li>
 						<ul><li><i>Mensuel: Salaire annuel / nombre de mois</i></li></ul><br/>
 						<hr/>
 						<li id="resPaje">Paje:</li>
