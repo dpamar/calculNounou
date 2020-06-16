@@ -1,0 +1,303 @@
+<html>
+	<head>
+		<style>
+td,th {
+	border: solid black 1px;
+	width: 20px;
+	text-align: center;
+}
+
+table {
+	border-spacing : 0;
+	border-collapse : collapse;
+}
+		</style>
+		<script src="calviewer.js"></script>
+		<script>
+function showCalendar(sd, ed) {
+
+	var cal = '';
+	startDate = new Date(sd.getFullYear(), sd.getMonth(), 1);
+	endDate = new Date(ed.getFullYear(), ed.getMonth()+1, 0);
+	var mCount = 12*(endDate.getYear() - startDate.getYear()) + (endDate.getMonth() - startDate.getMonth()) + 1;
+	var m = startDate.getMonth();
+	for(var i=0; mCount>= 1; ) {
+		cal += '<tr>';
+		for(var j=0; mCount>0 && j<4; j++, mCount--) {
+			cal += '<td style="vertical-align: top">' + displayMonth(startDate.getFullYear(), m++) + '</td>';
+		}
+		cal += '</tr>';
+	}
+	document.getElementById('calendar').innerHTML = cal;
+
+	appDays = [];
+	var y = startDate.getFullYear();
+	var m = startDate.getMonth();
+	var d = startDate.getDate();
+	for(var i = new Date(y,m,d); i<=endDate; d++, i=new Date(y,m,d))
+		appDays.push([z=i, z.getDay(), document.getElementById(z.getDate()+'_'+z.getMonth()+'_'+z.getFullYear()), 1, 0, 0]);
+	appDays.filter(x=>x[0]<sd || x[0]>ed).map(x=>x[3] = 0);
+	drawColors();
+}
+
+var appStartDate = null;
+var appEndDate = null;
+var appDays = [];
+
+function startChange() {
+	var val = document.getElementById('startDate').value;
+	if(val == '') return resetStartDate();
+	[y,m,d] = val.split('-').map(Number);
+	setStartDate(new Date(y,m-1,d));
+}
+function endChange() {
+	var val = document.getElementById('endDate').value;
+	if(val == '') return resetEndDate();
+	[y,m,d] = val.split('-').map(Number);
+	setEndDate(new Date(y,m-1,d));
+}
+
+function resetStartDate() {
+	appStartDate = null;
+	appEndDate = null;
+	document.getElementById('calendar').innerHTML = '';
+}
+
+function resetEndDate() {
+	appEndDate = null;
+	document.getElementById('calendar').innerHTML = '';
+}
+
+function setStartDate(date) {
+	appStartDate = date;
+	if(appEndDate == null || appEndDate < appStartDate) {
+		var y = appStartDate.getFullYear() + 1;
+		var m = appStartDate.getMonth();
+		var d = appStartDate.getDate();
+		appEndDate = new Date(y,m,d);
+		document.getElementById('endDate').value = dateToValue(appEndDate);
+	}
+	showCalendar(appStartDate, appEndDate);
+}
+
+function setEndDate(date) {
+	appEndDate = date;
+	if(appStartDate == null || appEndDate < appStartDate) {
+		var y = appEndDate.getFullYear() - 1;
+		var m = appEndDate.getMonth();
+		var d = appEndDate.getDate();
+		appStartDate = new Date(y,m,d);
+		document.getElementById('startDate').value = dateToValue(appStartDate);
+	}
+	showCalendar(appStartDate, appEndDate);
+}
+
+function dateToValue(date) {
+	var y = date.getFullYear();
+	var m = date.getMonth() + 1;
+	var d = date.getDate();
+	return y+'-'+('0'+m).substr(-2)+'-'+('0'+d).substr(-2);
+}
+
+function changeCellWorkload(value) {
+	var day = appDays.filter(x=>x[2] == value)[0];
+	if(!day) return;
+	day[3] = 1-day[3];
+	drawColors();
+}
+
+function dayChange(cat, day, value) {
+	z = parseInt(value);
+	if(isNaN(z)) return;
+	
+	appDays.filter(x=>x[1] == day).map(x=> x[4+cat] = value);
+	drawColors();
+}
+
+function drawColors() {
+	appDays.map(x=>{
+	if(x[3] == 0) x[2].style.backgroundColor = '#CCCCCC';
+	else if(x[4] == 0 && x[5] == 0) x[2].style.backgroundColor = '#FFFFFF';
+	else x[2].style.backgroundColor = '#AAFFAA';
+	});
+	showRes();
+}
+
+function show(name, value) {
+	document.getElementById('res'+name).innerHTML = name+' : ' + Math.round(value*100)/100;
+}
+
+function showRes() {
+	var workingDays = appDays.filter(x=>x[3]*x[4]);
+
+	var resJours = workingDays.length;
+	show('Jours', resJours);
+	
+	if(resJours == 0) return;
+
+	var firstDay = workingDays[0][0];
+	var lastDay = workingDays[resJours-1][0];
+	
+	var resMois = 1 + 12 * (lastDay.getFullYear() - firstDay.getFullYear()) + (lastDay.getMonth() - firstDay.getMonth());
+	show('Mois', resMois);
+
+	var totalHeure = appDays.reduce((a,b)=>a+b[3]*b[4], 0);
+	var resHeuresResponsables = appDays.reduce((a,b)=>a+b[3]*b[5], 0);
+	var resHeuresEffectives = totalHeure - resHeuresResponsables;
+	show('HeuresEffectives', resHeuresEffectives);
+	show('HeuresResponsables', resHeuresResponsables);
+
+	var resHeuresPayées = resHeuresEffectives + resHeuresResponsables * 2/3;
+	show('HeuresPayées', resHeuresPayées);
+
+	var resBrut = resHeuresPayées * appSalaireBrut;
+	show('Brut', resBrut);
+
+	var resNet = resHeuresPayées * appSalaireNet;
+	show('Net', resNet);
+
+	var resCongés = resNet / 10;
+	show('Congés', resCongés);
+
+	var resTotal = resNet + resCongés;
+	show('Total', resTotal);
+
+	var resMensuel = resTotal / resMois;
+	show('Mensuel', resMensuel);
+	
+	var resPaje = resHeuresPayées/resMois;
+	show('Paje', resPaje);
+	
+	var resJoursOff = appDays.filter(x=>x[0] >= appStartDate && x[0] <= appEndDate && x[3] == 0 && x[4] > 0).map(x => x[4] < 5 ? 0.5 : 1).reduce((a,b)=>a+b, 0);
+	show('JoursOff', resJoursOff);
+}
+
+var appSalaireBrut = 10.4;
+function salaireBrutChange(value) {
+	z = parseInt(value);
+	if(isNaN(z)) return;
+	appSalaireBrut = z;
+	showRes();
+}
+var appSalaireNet = 8.08;
+function salaireNetChange(value) {
+	z = parseInt(value);
+	if(isNaN(z)) return;
+	appSalaireNet = z;
+	showRes();
+}
+
+		</script>
+	</head>
+	<body>
+		<table style="width: 100%">
+			<tr>
+				<td style="width: 50%">
+					<table id="calendar" style="border-spacing: 10px; border-collapse: separate;">
+					</table>
+				</td>
+				<td style="width: 50%; text-align: left; vertical-align: top;">
+					<table style="border: none; width: 100%">
+						<tr>
+							<td style="border: none;">Date de début:</td>
+							<td style="border: none;"><input type="date" id="startDate" onchange="startChange();"></td>
+						</tr>
+						<tr>
+							<td style="border: none;">Date de fin:</td>
+							<td style="border: none;"><input type="date" id="endDate" onchange="endChange();">
+						</tr>
+						<tr>
+							<td style="border: none;">Heures du lundi:</td>
+							<td style="border: none;"><input type="text" id="lundi" onchange="dayChange(0, 1, this.value);" value="0">
+						</tr>
+						<tr>
+							<td style="border: none;">Dont présence responsable</td>
+							<td style="border: none;"><input type="text" id="lundi" onchange="dayChange(1, 1, this.value);" value="0">
+						</tr>
+						<tr>
+							<td style="border: none;">Heures du mardi:</td>
+							<td style="border: none;"><input type="text" id="mardi" onchange="dayChange(0, 2, this.value);" value="0">
+						</tr>
+						<tr>
+							<td style="border: none;">Dont présence responsable</td>
+							<td style="border: none;"><input type="text" id="mardi" onchange="dayChange(1, 2, this.value);" value="0">
+						</tr>
+						<tr>
+							<td style="border: none;">Heures du mercredi:</td>
+							<td style="border: none;"><input type="text" id="mercredi" onchange="dayChange(0, 3, this.value);" value="0">
+						</tr>
+						<tr>
+							<td style="border: none;">Dont présence responsable</td>
+							<td style="border: none;"><input type="text" id="mercredi" onchange="dayChange(1, 3, this.value);" value="0">
+						</tr>
+						<tr>
+							<td style="border: none;">Heures du jeudi:</td>
+							<td style="border: none;"><input type="text" id="jeudi" onchange="dayChange(0, 4, this.value);" value="0">
+						</tr>
+						<tr>
+							<td style="border: none;">Dont présence responsable</td>
+							<td style="border: none;"><input type="text" id="jeudi" onchange="dayChange(1, 4, this.value);" value="0">
+						</tr>
+						<tr>
+							<td style="border: none;">Heures du vendredi:</td>
+							<td style="border: none;"><input type="text" id="vendredi" onchange="dayChange(0, 5, this.value);" value="0">
+						</tr>
+						<tr>
+							<td style="border: none;">Dont présence responsable</td>
+							<td style="border: none;"><input type="text" id="vendredi" onchange="dayChange(1, 5, this.value);" value="0">
+						</tr>
+						<tr>
+							<td style="border: none;">Heures du samedi:</td>
+							<td style="border: none;"><input type="text" id="samedi" onchange="dayChange(0, 6, this.value);" value="0">
+						</tr>
+						<tr>
+							<td style="border: none;">Dont présence responsable</td>
+							<td style="border: none;"><input type="text" id="samedi" onchange="dayChange(1, 6, this.value);" value="0">
+						</tr>
+						<tr>
+							<td style="border: none;">Heures du dimanche:</td>
+							<td style="border: none;"><input type="text" id="dimanche" onchange="dayChange(0, 0, this.value);" value="0">
+						</tr>
+						<tr>
+							<td style="border: none;">Dont présence responsable</td>
+							<td style="border: none;"><input type="text" id="dimanche" onchange="dayChange(1, 0, this.value);" value="0">
+						</tr>
+						<tr>
+							<td style="border: none;">Salaire horaire brut:</td>
+							<td style="border: none;"><input type="text" id="salaireBrut" onchange="salaireBrutChange(this.value);" value="10.4">
+						</tr>
+						<tr>
+							<td style="border: none;">Salaire horaire net:</td>
+							<td style="border: none;"><input type="text" id="salaireNet" onchange="salaireNetChange(this.value);" value="8.08">
+						</tr>
+					</table>
+					<hr/>
+					Total:
+					<ul>
+						<li id="resJours">Jours:</li>
+						<li id="resMois">Mois:</li><br/>
+						
+						<li id="resHeuresEffectives">HeuresEffectives:</li>
+						<li id="resHeuresResponsables">HeuresResponsables:</li>
+						<li id="resHeuresPayées">HeuresPayées:</li>
+						<ul><li><i>Heures payées : heures effectives + 2 tiers des heures de surveillance responsable</i></li></ul><br/>
+						
+						<li id="resBrut">Brut:</li>
+						<ul><li><i>Salaire: volume d'heure </i>x<i> salaire horaire</i></li></ul>
+						<li id="resNet">Net:</li>
+						<ul><li><i>Salaire: volume d'heure </i>x<i> salaire horaire</i></li></ul>
+						<li id="resCongés">Congés:</li>
+						<ul><li><i>Congés: 10% du salaire net total</i></li></ul><br/>
+						
+						<li id="resTotal">Total:</li>
+						<ul><li><i>Total: Salaire + indemnité de congés payés</i></li></ul>
+						<li id="resMensuel">Mensuel:</li>
+						<ul><li><i>Mensuel: Salaire annuel / nombre de mois</i></li></ul><br/>
+						<hr/>
+						<li id="resPaje">Paje:</li>
+						<ul><li><i>Pour déclaration à la Paje : heures/mois, lissées sur la durée</i></li></ul>
+						<li id="resJoursOff">JoursOff:</li>						
+					</ul>
+				</td>
+	</body>
+</html>
